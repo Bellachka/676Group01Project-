@@ -1,0 +1,114 @@
+---
+title: "Choir Performance"
+author: "MA676 A1 2024"
+date: "2024-02-19"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(dplyr
+      , tidyr
+      , ggplot2
+      , ggExtra
+      , reshape2
+      , corrplot
+      , tidymodels
+      , caret
+      , car # Multi-colinearity
+      , scales
+      , ordinal # clm
+      , MASS # polr
+      )
+
+```
+
+
+```{r}
+
+```
+
+## R Markdown
+
+```{r}
+raw_data <- read.csv("wittkopp.dissertation.data-1.csv")
+data <- raw_data[, !grepl("Z_Score", names(raw_data))]
+
+# EDA
+table(data$Degree_Earned)
+table(data$School_Level)
+table(data$Reported_Gender)
+table(data$Size_of_Program)
+
+data$Degree_Earned <- factor(data$Degree_Earned ,
+                             levels=c("Non-Music Ed", "Music Education", "Multiple Reported"))
+data$School_Level <- factor(data$School_Level,
+                             levels=c("K-8", "High School", "Community/2-Yr College",
+                                      "University/4-Yr","More Than One Level"))
+data$Size_of_Program <- factor(data$Size_of_Program,
+                             levels=c("Less than 50 students", "50–100", "100–150","151+"))
+data$Reported_Gender <- ifelse(data$Reported_Gender == " ", NA, data$Reported_Gender)
+data$Reported_Race <- ifelse(data$Reported_Race == " ", NA, data$Reported_Race)
+data$Reported_Gender <- factor(data$Reported_Gender)
+data$Reported_Race <- factor(data$Reported_Race)
+#cor(data)
+# Ordinal: Locus
+data[, 1:32] <- lapply(data[, 1:32], as.factor)
+data$Success_Locus_Total <- factor(data$Success_Locus_Total, ordered = TRUE)
+table(data$Success_Locus_Total)
+## 
+ # A numerically singular Hessian often implies that there is perfect multicollinearity among predictors, or the model is overparameterized given the data.
+fit_sucloc <- clm(formula = Success_Locus_Total ~ as.factor(SuccessLoc1) + 
+                    as.factor(SuccessLoc2) + as.factor(SuccessLoc3), data = data)
+
+fit2_sucloc <- clm(formula = Success_Locus_Total ~ Reported_Race + 
+                     Reported_Gender + Size_of_Program + 
+                     School_Level + Degree_Earned, data = data)
+summary(fit2_sucloc)
+fit2_sucloc
+```
+
+## Melt
+
+```{r}
+data <- data %>%
+  mutate(across(c(SuccessLoc1, SuccessIntCon1, SuccessStab1, SuccessIntCon2, SuccessExtCon1, 
+                  SuccessLoc2, SuccessStab2, SuccessExtCon2, SuccessLoc3, SuccessIntCon3, 
+                  SuccessStab3, SuccessExtCon3, Success_Locus_Total, Success_Int_Cont_Total, 
+                  Success_Ext_Cont_Total, Success_Stability_Total,
+                  FailLoc1, FailIntCon1, FailStab1, FailIntCon2, FailExtCon1, 
+                  FailLoc2, FailStab2, FailExtCon2, FailLoc3, FailIntCon3, 
+                  FailStab3, FailExtCon3, Failure_Locus_Total, Failure_Int_Cont_Total, 
+                  Failure_Ext_Cont_Total, Failure_Stability_Total), 
+                ~as.numeric(as.character(.))))
+
+data_melt <- pivot_longer(data, 
+                          cols = c(SuccessLoc1, SuccessIntCon1, SuccessStab1, SuccessIntCon2, 
+                                   SuccessExtCon1, SuccessLoc2, SuccessStab2, SuccessExtCon2, 
+                                   SuccessLoc3, SuccessIntCon3, SuccessStab3, SuccessExtCon3, 
+                                   Success_Locus_Total, Success_Int_Cont_Total, 
+                                   Success_Ext_Cont_Total, Success_Stability_Total),
+                          names_to = "Suc", 
+                          values_to = "Scale_Suc")
+
+data_melt <- pivot_longer(data_melt, 
+                          cols = c(FailLoc1, FailIntCon1, FailStab1, FailIntCon2, FailExtCon1, 
+                                   FailLoc2, FailStab2, FailExtCon2, FailLoc3, FailIntCon3, 
+                                   FailStab3, FailExtCon3, Failure_Locus_Total, Failure_Int_Cont_Total,
+                                   Failure_Ext_Cont_Total, Failure_Stability_Total),
+                          names_to = "Fail", 
+                          values_to = "Scale_Fail")
+```
+
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+
+```
+
+
