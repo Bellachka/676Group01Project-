@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ---
 ##I. Abstract
-The success of a choir's choral performance has important implications for audiences, musicians, music institutions, etc. This report will mainly focus on predicting the sucess or failure of different choir performance. Specifically, the report will do analysis on Choir data with two method: EDA(Exploratory Data Analysis) and modeling. After reading this report, you will have a general idea how to predict the sucess or failure of choir and what's the most influential factor in predicting process.
+The success of a choir's choral performance has important implications for audiences, musicians, music institutions, etc. This report will mainly focus on predicting the success or failure of different choir performance. Specifically, the report will do analysis on Choir data with two method: EDA(Exploratory Data Analysis) and modeling. After reading this report, you will have a general idea how to predict the sucess or failure of choir and what's the most influential factor in predicting process.
 
 ##II. Introduction
 This project will be focusing on the analysis on the relationship between sucess/failure and other factors on choirs. The client is doing a project for his research paper. This report focus will be on developing a regression prediction model so as to predict which factors are most likely to affect the performance of choirs, thereby providing robust support for our client's research. The whole project will consist of following parts "Abstract", "Introduction", "Objectives",  "Procedures", "Result","Discussion", "Reference" and "Appendix". 
