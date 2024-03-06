@@ -62,7 +62,7 @@ The predictors that we consider in our analysis are as follows. For "Size of Pro
 ```{r, echo=FALSE}
 # Factorize demo info
 data_frame <- read.csv("wittkopp.dissertation.data-1.csv")
-raw_data <- data_frame
+raw_data <- data_frame  
 data <- raw_data[, !grepl("Z_Score", names(raw_data))]
 data$Degree_Earned <- factor(data$Degree_Earned ,
                              levels=c("Non-Music Ed", "Music Education", "Multiple Reported"))
