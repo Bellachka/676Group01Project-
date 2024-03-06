@@ -1,0 +1,293 @@
+---
+title: 'EDA_Ordered Logistic Regression'
+date: "2024-02-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+pacman::p_load(haven,
+  dplyr,
+  foreign,
+  tidyr)
+```
+
+```{r}
+data_sav <- read_sav("wittkopp.dissertation.data.sav")
+summary(data_sav)
+
+write.csv(data_sav, "/Users/charlenej/Desktop/Consulting R/wittkopp.dissertation.data.csv")
+
+data <- read.csv("wittkopp.dissertation.data.csv")
+data <- data[-1]
+summary(data)
+names(data)
+data$Degree_Earned <- factor(data$Degree_Earned ,
+                             levels=c("Non-Music Ed", "Music Education", "Multiple Reported"))
+data$School_Level <- factor(data$School_Level,
+                             levels=c("K-8", "High School", "Community/2-Yr College",
+                                      "University/4-Yr","More Than One Level"))
+data$Public_vs_Private <- factor(data$Public_vs_Private ,
+                             levels=c("Public", "Private"))
+
+data$Size_of_Program <- factor(data$Size_of_Program,
+                             levels=c("Less than 50 students", "50–100", "100–150","151+"))
+data$Reported_Gender <- ifelse(data$Reported_Gender == " ", NA, data$Reported_Gender)
+data$Reported_Race <- ifelse(data$Reported_Race == " ", NA, data$Reported_Race)
+data$Reported_Gender <- factor(data$Reported_Gender)
+data$Reported_Race <- factor(data$Reported_Race)
+
+```
+
+#Success--Histogram of data
+```{r}
+#load("wittkopp.dissertation.data.csv")
+
+#LOC
+sum(data$Success_Locus_Total == 0, na.rm=T)
+hist(data$Success_Locus_Total)
+#IC
+sum(data$Success_Int_Cont_Total == 0, na.rm=T)
+hist(data$Success_Int_Cont_Total)
+#EC
+sum(data$Success_Ext_Cont_Total == 0, na.rm=T)
+hist(data$Success_Ext_Cont_Total)
+#STABILITY
+sum(data$Success_Stability_Total == 0, na.rm=T)
+hist(data$Success_Stability_Total)
+```
+
+#Failure--Histogram of data
+```{r}
+#load("wittkopp.dissertation.data.csv")
+
+#LOC
+sum(data$Failure_Locus_Total == 0, na.rm=T)
+hist(data$Failure_Locus_Total)
+#IC
+sum(data$Failure_Int_Cont_Total == 0, na.rm=T)
+hist(data$Failure_Int_Cont_Total)
+#EC
+sum(data$Failure_Ext_Cont_Total == 0, na.rm=T)
+hist(data$Failure_Ext_Cont_Total)
+#STABILITY
+sum(data$Failure_Stability_Total == 0, na.rm=T)
+hist(data$Failure_Stability_Total)
+
+```
+
+
+```{r}
+data_new <- data %>% 
+  #Success
+  mutate( 
+    SuccessLOC= cut(Success_Locus_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+    mutate( 
+    SuccessIC= cut(Success_Int_Cont_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+    mutate( 
+    SuccessEC= cut(Success_Ext_Cont_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+    mutate( 
+    SuccessStability= cut(Success_Stability_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+  #Failure
+  mutate( 
+    FailureLOC= cut(Failure_Locus_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+  
+    mutate( 
+    FailureIC= cut(Failure_Int_Cont_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+    
+    mutate( 
+    FailureEC= cut(Failure_Ext_Cont_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))%>% 
+    
+    mutate( 
+    FailureStability= cut(Failure_Stability_Total,
+                          c(3, 11, 19, 27),
+                          right = F,
+                          include.lowest = T))
+  
+names(data_new)
+```
+
+#Success
+```{r}
+table(data$Success_Locus_Total, data_new$SuccessLOC, exclude = NULL)
+tapply(data$Success_Locus_Total, data_new$SuccessLOC, range)
+table(data_new$SuccessLOC, exclude = NULL)
+
+table(data$Success_Int_Cont_Total, data_new$SuccessIC, exclude = NULL)
+tapply(data$Success_Int_Cont_Total, data_new$SuccessIC, range)
+table(data_new$SuccessIC, exclude = NULL)
+
+table(data$Success_Ext_Cont_Total, data_new$SuccessEC, exclude = NULL)
+tapply(data$Success_Ext_Cont_Total, data_new$SuccessEC, range)
+table(data_new$SuccessEC, exclude = NULL)
+
+table(data$Success_Stability_Total, data_new$SuccessStability, exclude = NULL)
+tapply(data$Success_Stability_Total, data_new$SuccessStability, range)
+table(data_new$SuccessStability, exclude = NULL)
+```
+
+#Failure
+```{r}
+#Failure
+table(data$Failure_Locus_Total, data_new$FailureLOC, exclude = NULL)
+tapply(data$Failure_Locus_Total, data_new$FailureLOC, range)
+table(data_new$FailureLOC, exclude = NULL)
+
+table(data$Failure_Int_Cont_Total, data_new$FailureIC, exclude = NULL)
+tapply(data$Failure_Int_Cont_Total, data_new$FailureIC, range)
+table(data_new$FailureIC, exclude = NULL)
+
+table(data$Failure_Ext_Cont_Total, data_new$FailureEC, exclude = NULL)
+tapply(data$Failure_Ext_Cont_Total, data_new$FailureEC, range)
+table(data_new$FailureEC, exclude = NULL)
+
+table(data$Failure_Stability_Total, data_new$FailureStability, exclude = NULL)
+tapply(data$Failure_Stability_Total, data_new$FailureStability, range)
+table(data_new$FailureStability, exclude = NULL)
+
+```
+
+#SuccessLOC
+```{r}
+fit1 <- MASS::polr(SuccessLOC ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit1)
+
+```
+
+#SuccessIC
+```{r}
+fit2 <- MASS::polr(SuccessIC ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit2)
+```
+
+#SuccessEC
+```{r}
+fit3 <- MASS::polr(SuccessEC ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit3)
+```
+
+#SuccessStability
+```{r}
+fit4 <- MASS::polr(SuccessStability ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit4)
+```
+
+#FailureLOC
+```{r}
+fit5 <- MASS::polr(FailureLOC ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit5)
+
+```
+
+#FailureIC
+```{r}
+fit6 <- MASS::polr(FailureIC ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit6)
+```
+
+#FailureEC
+```{r}
+fit7 <- MASS::polr(FailureEC ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit7)
+```
+
+#FailureStability
+```{r}
+fit8 <- MASS::polr(FailureStability ~ Size_of_Program + Public_vs_Private+ 
+                    Number_of_Ensembles+ Years_at_School+ Degree_Earned+ 
+                    School_Level+Reported_Gender+ Reported_Race ,
+                      data = data_new,
+                      Hess= T)
+summary(fit8)
+```
+
+```{r}
+#ilogit <- function(x) { 1 / (1 + exp(-x))}
+#ilogit(fit.olr$zeta)
+```
+
+```{r}
+cumsum(
+  prop.table(
+    table(data_new$SuccessLOC)))
+
+cumsum(
+  prop.table(
+    table(data_new$SuccessIC)))
+
+cumsum(
+  prop.table(
+    table(data_new$SuccessEC)))
+
+cumsum(
+  prop.table(
+    table(data_new$SuccessStability)))
+```
+
+#Failure
+```{r}
+cumsum(
+  prop.table(
+    table(data_new$FailureLOC)))
+
+cumsum(
+  prop.table(
+    table(data_new$FailureIC)))
+
+cumsum(
+  prop.table(
+    table(data_new$FailureEC)))
+
+cumsum(
+  prop.table(
+    table(data_new$FailureStability)))
+```
