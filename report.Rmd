@@ -1,57 +1,350 @@
 ---
-title: "Choir Performance"
-author: "MA676 A1 2024"
-date: "2024-03-01"
-output:
-  pdf_document: default
-  html_document: default
+title: "**Choir Performances with Conductors' Vocational Details and Demographic Differences**"
+author:
+  - Team Members: Yan Wang, Mingrui Du, Yueqi Jin
+  - Teaching Fellow - Minh Thu Bui
+  - Supervisor - Professor Masanao Yajima
+output: 
+  bookdown::pdf_document2:
+    toc: false
+    number_sections: true
 ---
+
+```{r, echo = FALSE}
+#libraries
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(ggplot2))
+
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(dplyr
+      , tidyverse
+      , ggplot2
+      , ggExtra
+      , reshape2
+      , corrplot
+      , tidymodels
+      , caret
+      , car # Multi-colinearity
+      , scales
+      , ordinal # clm
+      , MASS # polr
+      , visreg
+      )
+
 ```
 
----
-##I. Abstract
-The success of a choir's choral performance has important implications for audiences, musicians, music institutions, etc. This report will mainly focus on predicting the sucess or failure of different choir performance. Specifically, the report will do analysis on Choir data with two method: EDA(Exploratory Data Analysis) and modeling. After reading this report, you will have a general idea how to predict the sucess or failure of choir and what's the most influential factor in predicting process.
 
-##II. Introduction
-This project will be focusing on the analysis on the relationship between sucess/failure and other factors on choirs. The client is doing a project for his research paper. This report focus will be on developing a regression prediction model so as to predict which factors are most likely to affect the performance of choirs, thereby providing robust support for our client's research. The whole project will consist of following parts "Abstract", "Introduction", "Objectives",  "Procedures", "Result","Discussion", "Reference" and "Appendix". 
+# Project Background and Objectives
 
-    
-##III. Objectives
-The main obejecties include:
-Whether there are significant differences between choir success scores and failure scores
-Find out contributing factors to predict dimensional scores of school choir performance from conductor’s perspective
+Jacob Wittkopp is a candidate in the Doctor of Musical Arts program at Boston University, Our client’s research target is conductors who lead choirs in schools and is interested in studying the affect the conductors' background information such as vocational details and demographic information in the outcomes of choir performances (success or failure).
 
+The research is conducted through a questionnaire of two parts: demographic information and main choir survey. The first part includes participants’ educational background, years of experience, classes, choral program size, school stage, school type, ethnicity, race and gender. Open blanks are set in years, classes (number of ensembles), school stage and gender to collect demographic/numeric data or to de-qualify people not teaching at school, such as those who conduct in community or church. The second part consists of two pages, each page has one blank for choir performance description, and a 9-point subscale to rate factors. Two pages are identical except the first asks for the most successful while the latter recalls most unsuccessful. Participants first write about the performances and summarize reasons of success/failure, then rate 12 statements on the scale 1-9 by the extent they believe factually correct. Each scale is designed following a literature in Causal Dimensionality Scale (McAuley et al.). The questions are grouped into four dimensions by summing the scores in those selected questions: Question 1, 6, 9 for locus of causality; 5, 8, 12 for external control; 3, 7, 11 for stability, and 2, 4, 10 for personal control.
 
-##IV. Procedures
+For the research, the clients are interested in answering three questions: The first question is to investigate whether there are significant differences in how choral conductors in educational settings attribute their successful and unsuccessful performances, as measured by dimensional scores. The second question is concerned about the attributional score differences correlated with performance outcome (success vs. failure), vocational details, and/or demographic differences? The first two research questions have been completed by the client, and thus, the third question is our primary objective: Can differences in performance outcome, vocational details, and/or demographic differences be used to predict dimensional scores? In other words, our goal is to discover which factors predict success locus score, success internal controllability, success external controllability, and success stability. Then analogous testing for each of the failure subscores.
 
-###Data source
+# Data Cleaning and Organizing
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+Questionnaires are posted online through several music organizations/institutes, having reached around 300 participants. However, some of the answers are discovered not working at any level of schools, as a result, 167 observations remained after filtering. The data consists of 167 rows (observations) and 50 columns (variables). The first 24 columns are 9-pt responses from the two subscales (“semantic differential scale” in terminology), values from 1 to 9. Columns 25-32 are scale scores summed into 4 dimensions (locus, internal control, external control, stability). The client removes Stab3 from calculation to improve Cronbach’s alpha. Although seemingly numeric, this part in data should not simply be treated as discrete numbers. Columns 33-40 are independent demographic info or job info, including ordinal variables (size), discrete numeric (years at school, number of ensembles), categorical (degree, school type, gender, race, ethnicity, school level). Column 41-50 are for Z-scores, which will not be considered for our analysis since they are irrelevant to our current objective.
 
-#load packages
-library(readr)
-library(ggplot2)
-library(tidyverse)
-library(sqldf)
-library(knitr)
-library(lme4)
-library(arm)
-library(coefplot)
-library(dplyr)
-library(leaflet)
+The predictors that we consider in our analysis are as follows. For "Size of Program", the values are ordinal, containing less than 50, 51–100, 100–150, 151+. We also have a column to survey which type of institutions those groups were based from, "Public vs Private", which is binomial categorical. Next is the "Number of Ensembles" for how many choirs participant conducted, presented as discrete numeric values. "Years at School" is a column that tell us how long participant has been at current institution. The next column is "Degree earned", which is nominal categorical that are have some participants marked more than one, and only one marked "non-degree", so these were designated as: Music Education Degree, Music (non-Music Ed) degree, or both. "School level" categorizes the level of education that those choirs were conducted, for example, elementary and middle/junior high to produce K–8 and 2-yr, university, and conservatory are denoted as post-secondary. This is treated non-ordinal categorical. In the "Gender" column, the client left "Prefer not to answer" and "Comment" as options with low responses. All others either male or female. There were a few non-White races represented, and some that marked "White" and one other, so we have two groups, "At least one non-White selected" as n=9 and "Only White selected" as n=155.
+
+# Exploratory Data Analysis (EDA):
+
+Total scores treated as numeric.
+```{r}
+# Factorize demo info
+data_frame <- read.csv("/Users/yanwang/Desktop/MSSP/676Group01Project-/wittkopp.dissertation.data-1.csv")
+raw_data <- data_frame
+data <- raw_data[, !grepl("Z_Score", names(raw_data))]
+data$Degree_Earned <- factor(data$Degree_Earned ,
+                             levels=c("Non-Music Ed", "Music Education", "Multiple Reported"))
+data$School_Level <- factor(data$School_Level,
+                             levels=c("K-8", "High School", "Community/2-Yr College",
+                                      "University/4-Yr","More Than One Level"))
+data$Size_of_Program <- factor(data$Size_of_Program,
+                             levels=c("Less than 50 students", "50–100", "100–150","151+"))
+data$Reported_Gender <- ifelse(data$Reported_Gender == " ", NA, data$Reported_Gender)
+data$Reported_Race <- ifelse(data$Reported_Race == " ", NA, data$Reported_Race)
+data$Reported_Gender <- factor(data$Reported_Gender)
+data$Reported_Race <- factor(data$Reported_Race)
 ```
+
+```{r, fig.width=12, fig.height=6}
+# Success vs Failure
+data_frame <- read.csv("/Users/yanwang/Desktop/MSSP/676Group01Project-/wittkopp.dissertation.data-1.csv")
+raw_data <- data_frame
+data <- raw_data[, !grepl("Z_Score", names(raw_data))]
+data$id <- c(1:167)
+total_names <-  colnames(data[c(25:32)])
+data_long <- data %>%
+  pivot_longer(cols = all_of(total_names),
+               names_to = c("type", "group", ".value"),
+               names_pattern = "(Success|Failure)_(.*)_(Total)",
+               values_drop_na = TRUE)
+ggplot(data_long, aes(x = type, y = Total, group = group)) +
+  geom_line(aes(group = id)) +
+  facet_wrap(~group, scales = "free", nrow = 2) + 
+  labs(title = "Success vs. Failure Total Comparison",
+       x = "Group",
+       y = "Total Value",
+       color = "Type") +
+  theme_minimal()
+# ggplot(data_melt) + geom_line() + aes(x=variable,y=value,group=id)
+# table(data$Degree_Earned)
+# table(data$School_Level)
+# table(data$Reported_Gender)
+# table(data$Size_of_Program)
 ```
 
-```{r message=FALSE, echo=FALSE, warning=FALSE}
-#read in data and combine
+```{r, fig.width=12, fig.height=6}
+# Boxplot: scores vs categorical variables
+demo <- colnames(data[c(33:40)])
+
+data_boxplt <- data[c(25:40)] %>%
+  pivot_longer(
+    cols = -all_of(c(total_names, "Number_of_Ensembles","Years_at_School")), # Exclude ID and the target variable
+    names_to = "covariate",
+    values_to = "value"
+  ) %>%
+  filter(covariate %in% demo) %>%
+  filter(!is.na(value) & value != " ")
+
+# Boxplots
+## Success Scores
+p <- ggplot(data_boxplt, aes(x = value, y = Success_Locus_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+q <- ggplot(data_boxplt, aes(x = value, y = Success_Int_Cont_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+r <- ggplot(data_boxplt, aes(x = value, y = Success_Ext_Cont_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+s <- ggplot(data_boxplt, aes(x = value, y = Success_Stability_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+p;q;r;s
+## Failure Scores
+a <- ggplot(data_boxplt, aes(x = value, y = Failure_Locus_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8)) 
+b <- ggplot(data_boxplt, aes(x = value, y = Failure_Int_Cont_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+c <- ggplot(data_boxplt, aes(x = value, y = Failure_Ext_Cont_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+d <- ggplot(data_boxplt, aes(x = value, y = Failure_Stability_Total)) +
+  geom_boxplot() +  # Or geom_line() if you want lines
+  facet_wrap(~ covariate, scales = "free", ncol = 3) +
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
+a;b;c;d
+```
+
+## Variable Selection
+
+```{r}
+data.cca <- data[c(25: 40)]
+colnames <- colnames(data.cca)
+covariates <- paste(colnames, collapse = " + ")
+forward <- stepAIC(lm(Success_Locus_Total ~ 1, data = data.cca), 
+                         direction = "forward", 
+                         scope = list(lower = formula(Success_Locus_Total ~ 1), 
+                                      upper = formula(Success_Locus_Total ~
+                                                        Success_Int_Cont_Total + Success_Ext_Cont_Total +
+                                                        Success_Stability_Total + Failure_Locus_Total +
+                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
+                                                        Failure_Stability_Total + Size_of_Program + 
+                                                        Public_vs_Private + Number_of_Ensembles + 
+                                                        Years_at_School + Degree_Earned + School_Level + 
+                                                        Reported_Gender + Reported_Race)))
+
+forward.2 <- stepAIC(lm(Success_Locus_Total ~ 1, data = data.cca), 
+                         direction = "forward", 
+                         scope = list(lower = formula(Success_Locus_Total ~ 1), 
+                                      upper = formula(Success_Locus_Total ~
+                                                        Failure_Locus_Total +
+                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
+                                                        Failure_Stability_Total + Size_of_Program + 
+                                                        Public_vs_Private + Number_of_Ensembles + 
+                                                        Years_at_School + Degree_Earned + School_Level + 
+                                                        Reported_Gender + Reported_Race)))
+summary(forward.2)
+
+backward <- stepAIC(lm(Success_Locus_Total ~ Success_Int_Cont_Total + Success_Ext_Cont_Total +
+                         Success_Stability_Total + Failure_Locus_Total + Failure_Int_Cont_Total +
+                         Failure_Ext_Cont_Total + Failure_Stability_Total + Size_of_Program + 
+                         Public_vs_Private + Number_of_Ensembles + Years_at_School + Degree_Earned + 
+                         School_Level + Reported_Gender + Reported_Race, data = na.omit(data.cca)), 
+                          direction = "backward")
+summary(backward)
+```
+
+No good features suggested by stepwise selection.
+
+```{r}
+# Kruskal Test (In replacement of ANOVA)
+variables <- c("Size_of_Program", "Public_vs_Private", "Number_of_Ensembles", 
+               "Years_at_School", "Degree_Earned", "School_Level", 
+               "Reported_Gender", "Reported_Race")
+
+sscores <- c("Success_Int_Cont_Total", "Success_Ext_Cont_Total", 
+              "Success_Stability_Total", "Success_Locus_Total")
+fscores <- c("Failure_Int_Cont_Total", "Failure_Ext_Cont_Total", 
+              "Failure_Stability_Total", "Failure_Locus_Total")
+
+ktest.success <- data.frame(Variable = character(), 
+                         Response_Variable = character(), 
+                         P_Value = numeric(), row.names = NULL)
+ktest.failure <- data.frame(Variable = character(), 
+                         Response_Variable = character(), 
+                         P_Value = numeric(), row.names = NULL)
 
 
-####overview of Airbnb data:
+for (variable in variables) {
+  for (response_variable in sscores) {
+    formula_string <- paste(response_variable, "~", variable)
+    result <- kruskal.test(as.formula(formula_string), data = data)
+    ktest.success <- rbind(ktest.success, data.frame(Variable = variable, 
+                                               Response_Variable = response_variable, 
+                                               P_Value = result$p.value))
+  }
+}
+for (variable in variables) {
+  for (response_variable in fscores) {
+    formula_string <- paste(response_variable, "~", variable)
+    result <- kruskal.test(as.formula(formula_string), data = data)
+    ktest.failure <- rbind(ktest.failure, data.frame(Variable = variable, 
+                                               Response_Variable = response_variable, 
+                                               P_Value = result$p.value))
+  }
+}
+View(ktest.success); View(ktest.failure)
 
-####features of the dataset:
+## Variables Significant for failure scores :
+## Reported_Gender 
+## for success scores
+## Public_vs_Private School_Level Years_at_School Size_of_Program
 
-###EDA
+```
 
+
+
+## Ordinal
+
+```{r}
+#cor(data)
+# Ordinal: Locus
+# data[, 1:32] <- lapply(data[, 1:32], as.factor)
+# data$Success_Locus_Total <- factor(data$Success_Locus_Total, ordered = TRUE)
+# table(data$Success_Locus_Total)
+## 
+ # A numerically singular Hessian often implies that there is perfect multicollinearity among predictors, or the model is overparameterized given the data.
+# fit_sucloc <- clm(formula = as.factor(Success_Locus_Total) ~ as.factor(SuccessLoc1) +
+#                     as.factor(SuccessLoc2) + as.factor(SuccessLoc3), data = data)
+# 
+# fit2_sucloc <- clm(formula = as.factor(Success_Locus_Total) ~ Reported_Race + 
+#                      Reported_Gender + Size_of_Program + 
+#                      School_Level + Degree_Earned, data = data)
+# summary(fit2_sucloc)
+# fit2_sucloc
+# visreg(fit2_sucloc, "X", scale="response")
+# 
+# ggplot(data) + 
+#   aes(x = Degree_Earned, y = Success_Locus_Total) +
+#   geom_point()
+# # glm, 
+# fit2_sucloc <- glm(formula = Success_Locus_Total ~ Reported_Race + 
+#                      Reported_Gender + Size_of_Program + 
+#                      School_Level + Degree_Earned, family = poisson, data = data)
+```
+
+## Work on Success-Failure Difference
+
+```{r, warning=FALSE}
+# I try to explore score differences here. You guys can dig in.
+data$diff_locus <- data$Success_Locus_Total - data$Failure_Locus_Total
+data$diff_int <- data$Success_Int_Cont_Total - data$Failure_Int_Cont_Total
+data$diff_ext <- data$Success_Ext_Cont_Total - data$Failure_Ext_Cont_Total
+data$diff_stab <- data$Success_Stability_Total - data$Failure_Stability_Total
+
+forward <- stepAIC(lm(diff_locus ~ 1, data = data), 
+                         direction = "forward", 
+                         scope = list(lower = formula(diff_locus ~ 1), 
+                                      upper = formula(diff_locus ~
+                                                        Success_Int_Cont_Total + Success_Ext_Cont_Total +
+                                                        Success_Stability_Total + Failure_Locus_Total +
+                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
+                                                        Failure_Stability_Total + Size_of_Program + 
+                                                        Public_vs_Private + Number_of_Ensembles + 
+                                                        Years_at_School + Degree_Earned + School_Level + 
+                                                        Reported_Gender + Reported_Race)))
+summary(forward)
+
+forward <- stepAIC(lm(diff_locus ~ 1, data = data), 
+                         direction = "forward", 
+                         scope = list(lower = formula(diff_locus ~ 1), 
+                                      upper = formula(diff_locus ~
+                                                        Size_of_Program + 
+                                                        Public_vs_Private + Number_of_Ensembles + 
+                                                        Years_at_School + Degree_Earned + School_Level + 
+                                                        Reported_Gender + Reported_Race)))
+summary(forward)
+
+# vnames <- colnames(data[-c(1:32, 41)])
+# form <- paste(vnames, collapse = "+")
+# form <- formula(paste("diff ~ ", form, sep = ""))
+# fit.diff <- lm(diff ~ Size_of_Program + Public_vs_Private + Number_of_Ensembles + 
+#                Years_at_School + Degree_Earned + 
+#                  School_Level + Reported_Gender, data)
+# summary(fit.diff)
+# summary(data[c(33:40)])
+
+```
+
+## Canonical Correlation Analysis
+
+```{r}
+# Canonical correlation analysis
+
+suc <- cbind(data[c(25:28)], 
+             model.matrix(~ Public_vs_Private - 1, data=data),
+             model.matrix(~ Size_of_Program - 1, data=data),
+             model.matrix(~ Years_at_School - 1, data=data),
+             model.matrix(~ School_Level - 1, data=data)) # dummy variables
+fa <- cbind(data[c(29:32)], 
+            model.matrix(~ Reported_Gender - 1, data=data))
+
+success <- as.matrix(suc) 
+failure <- as.matrix(fa)
+cca_result <- cancor(success, failure)
+print(cca_result)
+```
+
+# Models:
+
+Note that while all participants answered both prompts (success, then failure), the events for each prompt are not presumed to be related to one another.
+
+### Analysis:
+
+# Conclusion:
