@@ -59,8 +59,7 @@ The predictors that we consider in our analysis are as follows. For "Size of Pro
 
 ## II. Exploratory Data Analysis (EDA):
 
-Total scores treated as numeric.
-```{r}
+```{r, echo=FALSE}
 # Factorize demo info
 data_frame <- read.csv("wittkopp.dissertation.data-1.csv")
 raw_data <- data_frame
@@ -78,7 +77,9 @@ data$Reported_Gender <- factor(data$Reported_Gender)
 data$Reported_Race <- factor(data$Reported_Race)
 ```
 
-```{r, fig.width=12, fig.height=6}
+An intriguing phenomenon observed among participants is that, across the two phases (Success/Failure), high scores in one phase tend to dramatically decline in the other.
+
+```{r, echo = FALSE, fig.width=12, fig.height=6}
 # Success vs Failure
 data_frame <- read.csv("wittkopp.dissertation.data-1.csv")
 raw_data <- data_frame
@@ -90,6 +91,7 @@ data_long <- data %>%
                names_to = c("type", "group", ".value"),
                names_pattern = "(Success|Failure)_(.*)_(Total)",
                values_drop_na = TRUE)
+data_long$type <- factor(data_long$type, levels = c("Success", "Failure"))
 ggplot(data_long, aes(x = type, y = Total, group = group)) +
   geom_line(aes(group = id)) +
   facet_wrap(~group, scales = "free", nrow = 2) + 
@@ -98,17 +100,13 @@ ggplot(data_long, aes(x = type, y = Total, group = group)) +
        y = "Total Value",
        color = "Type") +
   theme_minimal()
-# ggplot(data_melt) + geom_line() + aes(x=variable,y=value,group=id)
-# table(data$Degree_Earned)
-# table(data$School_Level)
-# table(data$Reported_Gender)
-# table(data$Size_of_Program)
 ```
+
+We use box plots to catch a glimpse of score distributions to categorical variables. Total scores are treated as numeric here.
 
 ```{r, fig.width=12, fig.height=6}
 # Boxplot: scores vs categorical variables
 demo <- colnames(data[c(33:40)])
-
 data_boxplt <- data[c(25:40)] %>%
   pivot_longer(
     cols = -all_of(c(total_names, "Number_of_Ensembles","Years_at_School")), # Exclude ID and the target variable
@@ -117,94 +115,60 @@ data_boxplt <- data[c(25:40)] %>%
   ) %>%
   filter(covariate %in% demo) %>%
   filter(!is.na(value) & value != " ")
-
+data_boxplt$value <- factor(data_boxplt$value, 
+                                levels = c("Non-Music Ed", "Music Education", "Multiple Reported", 
+                                           "K-8", "High School", "Community/2-Yr College", "University/4-Yr",
+                                           "More Than One Level", "Less than 50 students", "50–100", 
+                                           "100–150","151+", "Public", "Private", "Male", "Female", 
+                                           'Only Marked "White"', "Marked at Least One Non-White"))
 # Boxplots
 ## Success Scores
 p <- ggplot(data_boxplt, aes(x = value, y = Success_Locus_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 q <- ggplot(data_boxplt, aes(x = value, y = Success_Int_Cont_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 r <- ggplot(data_boxplt, aes(x = value, y = Success_Ext_Cont_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 s <- ggplot(data_boxplt, aes(x = value, y = Success_Stability_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 p;q;r;s
 ## Failure Scores
 a <- ggplot(data_boxplt, aes(x = value, y = Failure_Locus_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") +
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8)) 
 b <- ggplot(data_boxplt, aes(x = value, y = Failure_Int_Cont_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 c <- ggplot(data_boxplt, aes(x = value, y = Failure_Ext_Cont_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 d <- ggplot(data_boxplt, aes(x = value, y = Failure_Stability_Total)) +
   geom_boxplot() +  # Or geom_line() if you want lines
   facet_wrap(~ covariate, scales = "free", ncol = 3) +
-  theme_minimal()+
+  theme_minimal() + xlab("Factors") + 
   theme(axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, size = 8))
 a;b;c;d
 ```
 
-### Variable Selection
-
-```{r}
-data.cca <- data[c(25: 40)]
-colnames <- colnames(data.cca)
-covariates <- paste(colnames, collapse = " + ")
-forward <- stepAIC(lm(Success_Locus_Total ~ 1, data = data.cca), 
-                         direction = "forward", 
-                         scope = list(lower = formula(Success_Locus_Total ~ 1), 
-                                      upper = formula(Success_Locus_Total ~
-                                                        Success_Int_Cont_Total + Success_Ext_Cont_Total +
-                                                        Success_Stability_Total + Failure_Locus_Total +
-                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
-                                                        Failure_Stability_Total + Size_of_Program + 
-                                                        Public_vs_Private + Number_of_Ensembles + 
-                                                        Years_at_School + Degree_Earned + School_Level + 
-                                                        Reported_Gender + Reported_Race)))
-
-forward.2 <- stepAIC(lm(Success_Locus_Total ~ 1, data = data.cca), 
-                         direction = "forward", 
-                         scope = list(lower = formula(Success_Locus_Total ~ 1), 
-                                      upper = formula(Success_Locus_Total ~
-                                                        Failure_Locus_Total +
-                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
-                                                        Failure_Stability_Total + Size_of_Program + 
-                                                        Public_vs_Private + Number_of_Ensembles + 
-                                                        Years_at_School + Degree_Earned + School_Level + 
-                                                        Reported_Gender + Reported_Race)))
-summary(forward.2)
-
-backward <- stepAIC(lm(Success_Locus_Total ~ Success_Int_Cont_Total + Success_Ext_Cont_Total +
-                         Success_Stability_Total + Failure_Locus_Total + Failure_Int_Cont_Total +
-                         Failure_Ext_Cont_Total + Failure_Stability_Total + Size_of_Program + 
-                         Public_vs_Private + Number_of_Ensembles + Years_at_School + Degree_Earned + 
-                         School_Level + Reported_Gender + Reported_Race, data = na.omit(data.cca)), 
-                          direction = "backward")
-summary(backward)
-```
-
-No good features suggested by stepwise selection.
+For most of the relationships, there is little discrepancy within each group. To convince if the covariates significantly affect response variables (that is, total scores), we use Kruskal Test to detect statistical differences between total scores and all demographic columns.
 
 ```{r}
 # Kruskal Test (In replacement of ANOVA)
@@ -252,6 +216,48 @@ View(ktest.success); View(ktest.failure)
 
 ```
 
+$$ We can see from the tables that $$
+
+### Variable Selection
+
+```{r}
+data.cca <- data[c(25: 40)]
+colnames <- colnames(data.cca)
+covariates <- paste(colnames, collapse = " + ")
+forward <- stepAIC(lm(Success_Locus_Total ~ 1, data = data.cca), 
+                         direction = "forward", 
+                         scope = list(lower = formula(Success_Locus_Total ~ 1), 
+                                      upper = formula(Success_Locus_Total ~
+                                                        Success_Int_Cont_Total + Success_Ext_Cont_Total +
+                                                        Success_Stability_Total + Failure_Locus_Total +
+                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
+                                                        Failure_Stability_Total + Size_of_Program + 
+                                                        Public_vs_Private + Number_of_Ensembles + 
+                                                        Years_at_School + Degree_Earned + School_Level + 
+                                                        Reported_Gender + Reported_Race)))
+
+forward.2 <- stepAIC(lm(Success_Locus_Total ~ 1, data = data.cca), 
+                         direction = "forward", 
+                         scope = list(lower = formula(Success_Locus_Total ~ 1), 
+                                      upper = formula(Success_Locus_Total ~
+                                                        Failure_Locus_Total +
+                                                        Failure_Int_Cont_Total + Failure_Ext_Cont_Total +
+                                                        Failure_Stability_Total + Size_of_Program + 
+                                                        Public_vs_Private + Number_of_Ensembles + 
+                                                        Years_at_School + Degree_Earned + School_Level + 
+                                                        Reported_Gender + Reported_Race)))
+summary(forward.2)
+
+backward <- stepAIC(lm(Success_Locus_Total ~ Success_Int_Cont_Total + Success_Ext_Cont_Total +
+                         Success_Stability_Total + Failure_Locus_Total + Failure_Int_Cont_Total +
+                         Failure_Ext_Cont_Total + Failure_Stability_Total + Size_of_Program + 
+                         Public_vs_Private + Number_of_Ensembles + Years_at_School + Degree_Earned + 
+                         School_Level + Reported_Gender + Reported_Race, data = na.omit(data.cca)), 
+                          direction = "backward")
+summary(backward)
+```
+
+No good features suggested by stepwise selection.
 
 
 ### Ordinal
@@ -328,6 +334,8 @@ summary(forward)
 
 ### Canonical Correlation Analysis
 
+$$ Briefly introduce canonical correlation analysis here, and why we use it $$
+
 ```{r}
 # Canonical correlation analysis
 
@@ -344,6 +352,8 @@ failure <- as.matrix(fa)
 cca_result <- cancor(success, failure)
 print(cca_result)
 ```
+As shown in the result, the highest combination of variables may explain 42.8% of the data, among which `School_Level` contributes most to interpretation.
+
 
 ## Modeling
 
